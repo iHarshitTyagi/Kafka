@@ -1,0 +1,77 @@
+zookeeper-server-start.bat config\zookeeper.properties
+kafka-server-start.bat config\server.properties
+
+kafka-topics.bat - Man pages
+kafka-topics.bat --zookeeper localhost:2181 --topic first_topic --create --partitions 3 --replication-factor 1
+kafka-topics.bat --zookeeper localhost:2181 --list
+kafka-topics.bat --zookeeper localhost:2181 --topic first_topic --describe
+kafka-topics.bat --zookeeper localhost:2181 --topic second_topic --create --partitions 6 --replication-factor 1
+kafka-topics.bat --zookeeper localhost:2181 --list
+kafka-topics.bat --zookeeper localhost:2181 --topic second_topic --describe
+kafka-topics.bat --zookeeper localhost:2181 --topic second_topic –delete
+
+kafka-console-producer.bat - Man pages
+kafka-console-producer --broker-list localhost:9092 --topic first_topic
+> Console to write messages to Kafka
+> Once done producing use Ctrl-C to exit
+kafka-console-producer --broker-list localhost:9092 --topic second_topic --producer-property acks=all
+Second topic does not exist. It's created. 
+There is a warning which is given for this when you write to the topic (broker not selected). Do ignore for now. Such topics has one partition and replication-factor of 1. Best practice is to create a topic before producing messages to it.
+kafka-console-producer --broker-list localhost:9092 --topic second_topic --describe
+
+kafka-console-consumer.bat - Man pages
+kafka-console-consumer --bootstrap-server localhost:9092 --topic first_topic
+- This is by default waiting for new messages. 
+- We dont need to from first rather, the read new messages when we connect.
+- Open another terminal and produce some messages to this topic
+- The new messages produced should be displayed by the consumer
+kafka-console-producer --broker-list localhost:9092 --topic first_topic
+- Write some messages and see it get consumed
+kafka-console-consumer --bootstrap-server localhost:9092 --topic first_topic --from-beginning
+- This is the case when you need to read from a topic from the beginning
+
+kafka-console-consumer --bootstrap-server localhost:9092 --topic first_topic --group my-first-application
+- Create a mix of 3 consumers of same group
+- Publish messages. You can see the distribution of load between the group members.
+- If one of the group members go down, distribution happens from those which are running.
+Committing Offsets
+kafka-console-consumer --bootstrap-server localhost:9092 --topic first_topic --group my-second-application --from-beginning
+- All messages are read from beginning.
+- Offset read is committed. 
+Now run the same command again. The --from-beginning has no effect as for this consumer group, offsets have been committed. 
+
+
+kafka-consumer-groups.bat - Man Pages
+kafka-consumer-groups --bootstrap-server localhost:9092 --list my-first-application
+- Lists your my-first-application and my-second-application groups
+- Note if you have any console applications without a consumer group, these would also be listed as follows - console-consumer-(number)
+kafka-consumer-groups --bootstrap-server localhost:9092 --describe --group my-first-application
+- There are no active consumer/clients so these will be empty
+- This is a very comprehensive listing of your group
+- Shows topic, partitions, offsets, log offsets, lags among other very useful information
+- As you have read all messages there are no lags
+Start another console and produce some messages to first-topic
+Do a describe on my-first-application, you will now see lags. These are newly published messages, not consumed
+In another terminal use a consumer group to consome newly produced messages from my-first-application group and read new messages
+Now, the describe my-first-application group. The lags go down to 0
+You will also see the consumer/client information 
+
+Reset Offsets
+How do I ensure my consumer group read messages from a specific point in time rather from current offsets?
+kafka-consumer-groups.bat has a --reset-offsets flag for this
+kafka-consumer-groups --bootstrap-server localhost:9092 --group my-first-application --reset-offsets --to-earliest
+- This will result in an error as this is considered a dry run
+- Also topic is required for this reset
+- Use --execute switch to make this change permanent
+kafka-consumer-groups --bootstrap-server localhost:9092 --group my-first-application --reset-offsets --to-earliest --topic first_topic --execute
+This will reset offsets to 0
+Now start a consumer for this group. It should read all the data from the start of the topic to current. 
+kafka-console-consumer --bootstrap-server localhost:9092 --topic first_topic --group my-first-application
+You can also use --shift-by <long> to shift offset by a numeric range
+kafka-consumer-groups --bootstrap-server localhost:9092 --group my-first-application --reset-offsets --shift-by 5 --topic first_topic --execute
+
+
+kafka-consumer-groups --bootstrap-server localhost:9092 --group my-third-application --topic first_topic
+kafka-consumer-groups --bootstrap-server localhost:9092 --describe --group my-third-application
+
+kafka-topics.bat --zookeeper localhost:2181 --topic twitter_tweets --create --partitions 3 --replication-factor 1
